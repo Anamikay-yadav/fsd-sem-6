@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Upload Notes — Smart Study Assistant{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="mb-4">
+      <a href="{{ url_for('index') }}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+      </a>
+      <h2 class="mt-2 mb-1">Upload Study Notes</h2>
+      <p class="text-muted">Upload a PDF and AI will generate a summary and 10 quiz questions.</p>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <form method="POST" enctype="multipart/form-data" id="uploadForm">
+          <div class="upload-zone border-2 border-dashed rounded-3 p-5 text-center mb-4" id="dropZone">
+            <i class="bi bi-cloud-upload fs-1 text-primary mb-3 d-block"></i>
+            <h5 class="mb-2">Drag and drop your PDF here</h5>
+            <p class="text-muted small mb-3">Maximum file size: 50MB</p>
+            <input type="file" name="file" id="fileInput" accept=".pdf" class="d-none" required>
+            <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+              Browse Files
+            </button>
+            <div id="selectedFile" class="mt-3 d-none">
+              <div class="d-flex align-items-center justify-content-center gap-2 text-success">
+                <i class="bi bi-file-earmark-pdf fs-5"></i>
+                <span id="fileName" class="fw-medium"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+              <i class="bi bi-cpu me-2"></i>Process with AI
+            </button>
+          </div>
+        </form>
+
+        <div id="processingOverlay" class="d-none mt-4">
+          <div class="text-center p-4 border rounded-3 bg-light">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <h6 id="processingMessage">Uploading PDF...</h6>
+            <p class="text-muted small mb-0">This may take 20–40 seconds.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dropZone = document.getElementById("dropZone");
+const fileInput = document.getElementById("fileInput");
+const selectedFile = document.getElementById("selectedFile");
+const fileName = document.getElementById("fileName");
+const uploadForm = document.getElementById("uploadForm");
+const submitBtn = document.getElementById("submitBtn");
+const processingOverlay = document.getElementById("processingOverlay");
+const processingMessage = document.getElementById("processingMessage");
+
+fileInput.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    fileName.textContent = file.name;
+    selectedFile.classList.remove("d-none");
+    dropZone.classList.add("border-success");
+  }
+});
+
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropZone.classList.add("bg-primary-subtle");
+});
+
+dropZone.addEventListener("dragleave", () => {
+  dropZone.classList.remove("bg-primary-subtle");
+});
+
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZone.classList.remove("bg-primary-subtle");
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === "application/pdf") {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+    fileName.textContent = file.name;
+    selectedFile.classList.remove("d-none");
+    dropZone.classList.add("border-success");
+  } else {
+    alert("Please drop a PDF file.");
+  }
+});
+
+const steps = ["Uploading PDF...", "Extracting text...", "Generating summary...", "Creating quiz questions...", "Almost done..."];
+
+uploadForm.addEventListener("submit", () => {
+  if (!fileInput.files[0]) return;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+  processingOverlay.classList.remove("d-none");
+  let step = 0;
+  setInterval(() => {
+    step = (step + 1) % steps.length;
+    processingMessage.textContent = steps[step];
+  }, 6000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,12 @@
+.upload-zone {
+  border: 2px dashed #0d6efd !important;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.upload-zone:hover, .upload-zone.border-success { background-color: #f8f9ff; }
+.summary-text p { margin-bottom: 1rem; line-height: 1.8; }
+.option-btn { padding: 0.6rem 1rem; transition: all 0.15s; }
+.option-btn:hover:not(:disabled) { background: #f0f4ff; }
+.stat-icon { display: inline-flex; align-items: center; justify-content: center; }
+.card { transition: box-shadow 0.15s; }
+.card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08) !important; }

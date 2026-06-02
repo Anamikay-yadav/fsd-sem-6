@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Smart Study Assistant{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-1">Welcome back</h1>
+    <p class="text-muted mb-0">Here is your study overview and recent materials.</p>
+  </div>
+  <a href="{{ url_for('upload') }}" class="btn btn-primary">
+    <i class="bi bi-upload me-2"></i>Upload Notes
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex justify-content-between align-items-start">
+        <div>
+          <p class="text-muted small mb-1">Total Documents</p>
+          <h3 class="mb-0 fw-bold">{{ stats.total_documents }}</h3>
+        </div>
+        <div class="stat-icon bg-primary-subtle text-primary rounded p-2">
+          <i class="bi bi-file-earmark-text fs-5"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex justify-content-between align-items-start">
+        <div>
+          <p class="text-muted small mb-1">Processed</p>
+          <h3 class="mb-0 fw-bold">{{ stats.processed_documents }}</h3>
+        </div>
+        <div class="stat-icon bg-success-subtle text-success rounded p-2">
+          <i class="bi bi-check-circle fs-5"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex justify-content-between align-items-start">
+        <div>
+          <p class="text-muted small mb-1">Quiz Questions</p>
+          <h3 class="mb-0 fw-bold">{{ stats.total_quizzes }}</h3>
+        </div>
+        <div class="stat-icon bg-warning-subtle text-warning rounded p-2">
+          <i class="bi bi-question-circle fs-5"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-body d-flex justify-content-between align-items-start">
+        <div>
+          <p class="text-muted small mb-1">Average Score</p>
+          <h3 class="mb-0 fw-bold">{{ stats.average_score | round(1) }}%</h3>
+        </div>
+        <div class="stat-icon bg-info-subtle text-info rounded p-2">
+          <i class="bi bi-graph-up fs-5"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-bottom py-3">
+    <h5 class="mb-0 fw-semibold">Recent Documents</h5>
+  </div>
+  <div class="card-body p-0">
+    {% if documents %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Document</th>
+            <th>Status</th>
+            <th>Uploaded</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for doc in documents %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
+                <div>
+                  <div class="fw-medium">{{ doc.original_name | truncate(50) }}</div>
+                  {% if doc.page_count %}
+                  <small class="text-muted">{{ doc.page_count }} pages</small>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge bg-{{ 'success' if doc.status == 'done' else 'warning' if doc.status == 'processing' else 'danger' if doc.status == 'error' else 'secondary' }}">
+                {{ doc.status }}
+              </span>
+            </td>
+            <td><small class="text-muted">{{ doc.created_at[:10] }}</small></td>
+            <td class="text-end">
+              {% if doc.status == 'done' %}
+              <a href="{{ url_for('document_detail', doc_id=doc.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                <i class="bi bi-eye me-1"></i>View
+              </a>
+              {% endif %}
+              <form method="POST" action="{{ url_for('delete_document', doc_id=doc.id) }}" class="d-inline"
+                    onsubmit="return confirm('Delete this document?')">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-file-earmark-plus fs-1 d-block mb-3 opacity-50"></i>
+      <h6>No documents yet</h6>
+      <p class="small">Upload your first set of notes to get an AI-generated summary and quiz.</p>
+      <a href="{{ url_for('upload') }}" class="btn btn-primary mt-2">
+        <i class="bi bi-upload me-2"></i>Upload Notes
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

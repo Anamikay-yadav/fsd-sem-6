@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}{{ document.original_name }} — Smart Study Assistant{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="{{ url_for('index') }}" class="text-decoration-none text-muted small">
+    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+  </a>
+  <div class="d-flex justify-content-between align-items-start mt-2">
+    <div>
+      <h2 class="mb-1">{{ document.original_name }}</h2>
+      <div class="d-flex gap-3 text-muted small">
+        {% if document.page_count %}
+        <span><i class="bi bi-file-earmark me-1"></i>{{ document.page_count }} pages</span>
+        {% endif %}
+        <span><i class="bi bi-calendar me-1"></i>{{ document.created_at[:10] }}</span>
+        <span class="badge bg-success">{{ document.status }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ul class="nav nav-tabs mb-4" id="studyTabs" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#summary-panel" type="button">
+      <i class="bi bi-journal-text me-2"></i>Summary
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#quiz-panel" type="button">
+      <i class="bi bi-patch-question me-2"></i>Quiz
+      <span class="badge bg-primary ms-1">{{ questions | length }}</span>
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="summary-panel">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between">
+        <h5 class="mb-0 fw-semibold">AI-Generated Summary</h5>
+        <span class="badge bg-primary-subtle text-primary">Powered by AI</span>
+      </div>
+      <div class="card-body p-4">
+        {% if document.summary %}
+        <div class="summary-text lh-lg">
+          {% for paragraph in document.summary.split('\n\n') %}
+            {% if paragraph.strip() %}<p>{{ paragraph.strip() }}</p>{% endif %}
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+          <i class="bi bi-hourglass-split fs-2 d-block mb-2"></i>
+          Summary not available.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="quiz-panel">
+    {% if questions %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-medium">Your Score</span>
+          <div class="d-flex align-items-center gap-3">
+            <span class="text-muted small">
+              <span id="correctCount">0</span> / <span id="totalAnswered">0</span> answered
+            </span>
+            <span class="badge bg-primary fs-6" id="scorePercent">—</span>
+          </div>
+        </div>
+        <div class="progress mt-2" style="height:6px;">
+          <div class="progress-bar" id="progressBar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    {% for q in questions %}
+    <div class="card border-0 shadow-sm mb-3 question-card" id="question-{{ q.id }}"
+         data-question-id="{{ q.id }}" data-correct-index="{{ q.correct_index }}" data-doc-id="{{ document.id }}">
+      <div class="card-body p-4">
+        <div class="d-flex gap-3 align-items-start mb-3">
+          <span class="badge bg-secondary rounded-circle flex-shrink-0" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;">
+            {{ loop.index }}
+          </span>
+          <h6 class="mb-0 lh-base">{{ q.question }}</h6>
+        </div>
+        <div class="options-list ps-2">
+          {% set letters = ['A', 'B', 'C', 'D'] %}
+          {% for i in range(q.options | length) %}
+          <button class="option-btn btn btn-outline-secondary w-100 text-start mb-2 d-flex align-items-center gap-2"
+                  data-option-index="{{ i }}"
+                  onclick="submitAnswer({{ q.id }}, {{ i }}, {{ document.id }}, this)">
+            <span class="option-letter badge bg-secondary flex-shrink-0">{{ letters[i] }}</span>
+            <span>{{ q.options[i] }}</span>
+          </button>
+          {% endfor %}
+        </div>
+        <div class="feedback-area mt-3 d-none" id="feedback-{{ q.id }}">
+          <div class="alert mb-0" id="feedback-alert-{{ q.id }}">
+            <div id="feedback-text-{{ q.id }}"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="card border-0 shadow-sm d-none" id="finalScore">
+      <div class="card-body text-center p-5">
+        <i class="bi bi-trophy fs-1 text-warning d-block mb-3"></i>
+        <h3 class="mb-2">Quiz Complete!</h3>
+        <p class="text-muted mb-4">You scored <strong id="finalScoreText">—</strong></p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button class="btn btn-primary" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise me-2"></i>Retake Quiz
+          </button>
+          <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-house me-2"></i>Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-question-circle fs-2 d-block mb-2"></i>
+        No quiz questions available.
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let correctCount = 0;
+let totalAnswered = 0;
+const totalQuestions = document.querySelectorAll(".question-card").length;
+
+async function submitAnswer(questionId, selectedIdx, docId, clickedBtn) {
+  const card = document.getElementById(`question-${questionId}`);
+  card.querySelectorAll(".option-btn").forEach(btn => {
+    btn.disabled = true;
+    btn.style.cursor = "default";
+  });
+
+  try {
+    const response = await fetch("/api/answer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question_id: questionId, selected_index: selectedIdx, doc_id: docId })
+    });
+    const result = await response.json();
+    if (!response.ok) return;
+
+    const correctIdx = result.correct_index;
+    card.querySelectorAll(".option-btn").forEach((btn, idx) => {
+      if (idx === correctIdx) {
+        btn.classList.replace("btn-outline-secondary", "btn-success");
+      } else if (idx === selectedIdx && !result.correct) {
+        btn.classList.replace("btn-outline-secondary", "btn-danger");
+      }
+    });
+
+    const feedbackDiv = document.getElementById(`feedback-${questionId}`);
+    const feedbackAlert = document.getElementById(`feedback-alert-${questionId}`);
+    const feedbackText = document.getElementById(`feedback-text-${questionId}`);
+    feedbackDiv.classList.remove("d-none");
+    const letters = ["A", "B", "C", "D"];
+    if (result.correct) {
+      feedbackAlert.className = "alert alert-success mb-0";
+      feedbackText.innerHTML = `<strong>Correct!</strong> ${result.explanation || ""}`;
+      correctCount++;
+    } else {
+      feedbackAlert.className = "alert alert-danger mb-0";
+      feedbackText.innerHTML = `<strong>Incorrect.</strong> Correct answer: <strong>${letters[correctIdx]}</strong>. ${result.explanation || ""}`;
+    }
+
+    totalAnswered++;
+    updateScore();
+    if (totalAnswered === totalQuestions) setTimeout(showFinal, 800);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function updateScore() {
+  document.getElementById("correctCount").textContent = correctCount;
+  document.getElementById("totalAnswered").textContent = totalAnswered;
+  const pct = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 0;
+  document.getElementById("scorePercent").textContent = `${pct}%`;
+  document.getElementById("progressBar").style.width = `${(totalAnswered / totalQuestions) * 100}%`;
+}
+
+function showFinal() {
+  const card = document.getElementById("finalScore");
+  const pct = Math.round((correctCount / totalQuestions) * 100);
+  document.getElementById("finalScoreText").textContent = `${correctCount} / ${totalQuestions} (${pct}%)`;
+  card.classList.remove("d-none");
+  card.scrollIntoView({ behavior: "smooth" });
+}
+</script>
+{% endblock %}
